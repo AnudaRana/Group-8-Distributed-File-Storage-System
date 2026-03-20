@@ -13,14 +13,13 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	return &Config{
-		NodeID: getEnv("NODE_ID", "node1"),
-		Host:   getEnv("HOST", "127.0.0.1"),
-		Port:   getEnv("PORT", "12345"),
-		Peers:  parsePeers(getEnv("PEERS", "")),
-	}
+    return &Config{
+        NodeID: getEnv("NODE_ID", "node1"),
+        Host:   getEnv("HOST", "127.0.0.1"),
+        Port:   getEnv("PORT", "9001"),        // ← change from 12345 to 9001
+        Peers:  parsePeers(getEnv("PEERS", "")),
+    }
 }
-
 func parsePeers(peersStr string) []string {
 	if peersStr == "" {
 		return []string{}

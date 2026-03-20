@@ -29,3 +29,13 @@ run-cluster:
 # Clean binaries (if any)
 clean:
 	del /Q *.exe
+
+
+build:
+	go build -buildvcs=false ./...
+
+test:
+	go test -buildvcs=false ./internal/fault/... -v
+
+run-node:
+	go run -buildvcs=false cmd/node/main.go
