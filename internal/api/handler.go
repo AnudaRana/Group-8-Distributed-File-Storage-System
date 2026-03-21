@@ -11,8 +11,6 @@ import (
 )
 
 var cfg = config.LoadConfig()
-
-// FaultManager is set from main.go after startup
 var FM *fault.FaultManager
 
 func MessageHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +31,15 @@ func MessageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		utils.Log(cfg.NodeID, "💓 Heartbeat recorded from %s", msg.Sender)
 
-	// Other members will add their cases here:
+	case "GOSSIP":
+		if FM != nil {
+			failedNode, ok := msg.Payload["failed_node"].(string)
+			if ok && failedNode != "" {
+				FM.Gossip.ReceiveGossip(msg.Sender, failedNode, FM.Detector)
+			}
+		}
+
+	// Other members add their cases below — do not remove existing cases
 	// case types.MsgReplicate:  → Member 2
 	// case types.MsgSyncClock:  → Member 3
 	// case types.MsgVoteReq:    → Member 4

@@ -12,4 +12,7 @@ bin/
 
 # OS files
 Thumbs.db
-.DS_Store
+nul
+# Project documentation
+Distributed File Storage System(How to create project).pdf
+*.pdf

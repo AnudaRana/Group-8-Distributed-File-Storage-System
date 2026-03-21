@@ -7,16 +7,25 @@ import (
 )
 
 func main() {
-	msg, _ := types.NewMessage(
-		types.MsgHeartbeat,
-		"client",
-		map[string]interface{}{"status": "ping"},
-	)
-	utils.Log("CLIENT", "Sending heartbeat to 127.0.0.1:12345...")
-	err := transport.Send("http://127.0.0.1:12345/message", msg)
-	if err != nil {
-		utils.Log("CLIENT", "Error connecting to node: %v", err)
-		return
+	nodes := []string{
+		"127.0.0.1:9001",
+		"127.0.0.1:9002",
+		"127.0.0.1:9003",
 	}
-	utils.Log("CLIENT", "Message successfully sent!")
+
+	for _, node := range nodes {
+		msg, _ := types.NewMessage(
+			types.MsgHeartbeat,
+			"client",
+			map[string]interface{}{"status": "ping"},
+		)
+
+		utils.Log("CLIENT", "Sending heartbeat to %s...", node)
+		err := transport.Send("http://"+node+"/message", msg)
+		if err != nil {
+			utils.Log("CLIENT", "Error connecting to %s: %v", node, err)
+		} else {
+			utils.Log("CLIENT", "✅ Message successfully sent to %s!", node)
+		}
+	}
 }
