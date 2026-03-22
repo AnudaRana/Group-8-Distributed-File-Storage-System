@@ -12,6 +12,7 @@ type FaultManager struct {
 	Detector  *Detector
 	Heartbeat *HeartbeatSender
 	Gossip    *GossipManager
+	Recovery  *RecoveryManager
 }
 
 func NewFaultManager(selfID string, peers []string, peerNodes []*types.Node) *FaultManager {
@@ -23,7 +24,6 @@ func NewFaultManager(selfID string, peers []string, peerNodes []*types.Node) *Fa
 
 	gossip := NewGossipManager(selfID, 2)
 
-	// Register peers with gossip manager
 	for i, addr := range peers {
 		parts := strings.Split(addr, ":")
 		if len(parts) == 2 {
@@ -36,18 +36,26 @@ func NewFaultManager(selfID string, peers []string, peerNodes []*types.Node) *Fa
 	}
 
 	hbSender := NewHeartbeatSender(selfID, peers, 2*time.Second)
+	recovery := NewRecoveryManager(3) // replication factor of 3
 
 	fm := &FaultManager{
 		Detector:  detector,
 		Heartbeat: hbSender,
 		Gossip:    gossip,
+		Recovery:  recovery,
 	}
 
-	// When a node fails → gossip to peers automatically
+	// When a node fails → gossip + trigger recovery
 	detector.OnFailure = func(nodeID string) {
-		fmt.Printf("[FAULT MANAGER] 🚨 Node %s confirmed FAILED — spreading via gossip\n", nodeID)
+		fmt.Printf("[FAULT MANAGER] 🚨 Node %s confirmed FAILED\n", nodeID)
 		go fm.Gossip.SpreadFailure(nodeID)
-		// Phase 4: recovery.OnNodeFailure(nodeID) goes here
+		fm.Recovery.OnNodeFailure(nodeID)
+	}
+
+	// When a node comes back → trigger rejoin recovery
+	detector.OnRejoin = func(nodeID string) {
+		fmt.Printf("[FAULT MANAGER] 💚 Node %s rejoined the cluster\n", nodeID)
+		fm.Recovery.OnNodeRejoin(nodeID)
 	}
 
 	return fm

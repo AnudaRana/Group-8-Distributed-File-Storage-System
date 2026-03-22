@@ -1,8 +1,10 @@
 package api
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"dfs-system/internal/config"
 	"dfs-system/internal/fault"
@@ -49,4 +51,36 @@ func MessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func StatusHandler(w http.ResponseWriter, r *http.Request) {
+	if FM == nil {
+		http.Error(w, "FaultManager not initialized", 500)
+		return
+	}
+
+	statuses := FM.Detector.GetStatuses()
+	records := FM.Recovery.GetAllRecords()
+
+	result := map[string]interface{}{}
+
+	for nodeID, status := range statuses {
+		entry := map[string]interface{}{
+			"status": status,
+		}
+		if record, ok := records[nodeID]; ok {
+			entry["state"] = record.State
+			if !record.FailedAt.IsZero() {
+				entry["failed_at"] = record.FailedAt.Format("15:04:05")
+			}
+			if !record.RecoveredAt.IsZero() {
+				entry["recovered_at"] = record.RecoveredAt.Format("15:04:05")
+				entry["downtime"] = record.RecoveredAt.Sub(record.FailedAt).Round(time.Second).String()
+			}
+		}
+		result[nodeID] = entry
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }

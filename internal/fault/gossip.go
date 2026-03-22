@@ -10,16 +10,15 @@ import (
 	"dfs-system/internal/types"
 )
 
-// Local constant — avoids modifying shared types/message.go
 const msgGossip = "GOSSIP"
 
 type GossipManager struct {
 	mu        sync.Mutex
 	selfID    string
-	peers     map[string]string // nodeID → address (e.g. "127.0.0.1:9002")
-	fanout    int               // how many peers to gossip to each round
-	rumours   map[string]int    // nodeID → how many times we've gossiped about it
-	maxRounds int               // stop gossiping after this many rounds
+	peers     map[string]string
+	fanout    int
+	rumours   map[string]int
+	maxRounds int
 }
 
 func NewGossipManager(selfID string, fanout int) *GossipManager {
@@ -32,7 +31,6 @@ func NewGossipManager(selfID string, fanout int) *GossipManager {
 	}
 }
 
-// Register a peer so gossip knows who to tell
 func (g *GossipManager) RegisterPeer(nodeID, address string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -40,7 +38,6 @@ func (g *GossipManager) RegisterPeer(nodeID, address string) {
 	fmt.Printf("[GOSSIP] Registered peer %s at %s\n", nodeID, address)
 }
 
-// Called when this node detects a failure — spread the news
 func (g *GossipManager) SpreadFailure(failedNodeID string) {
 	g.mu.Lock()
 
@@ -52,7 +49,6 @@ func (g *GossipManager) SpreadFailure(failedNodeID string) {
 
 	g.rumours[failedNodeID]++
 	round := g.rumours[failedNodeID]
-
 	targets := g.pickRandomPeers(g.fanout, failedNodeID)
 	g.mu.Unlock()
 
@@ -64,8 +60,25 @@ func (g *GossipManager) SpreadFailure(failedNodeID string) {
 	}
 }
 
-// Called when we receive gossip FROM another node about a failure
 func (g *GossipManager) ReceiveGossip(fromNode, failedNodeID string, detector *Detector) {
+	// Fix 1 — ignore gossip about ourselves
+	if failedNodeID == g.selfID {
+		fmt.Printf("[GOSSIP] Ignoring gossip about ourselves from %s\n", fromNode)
+		return
+	}
+
+	// Fix 2 — ignore stale gossip about nodes already back online
+	if detector != nil {
+		detector.mu.Lock()
+		node, exists := detector.nodes[failedNodeID]
+		if exists && node.Status == types.StatusAlive {
+			detector.mu.Unlock()
+			fmt.Printf("[GOSSIP] Ignoring stale gossip — %s is already ONLINE\n", failedNodeID)
+			return
+		}
+		detector.mu.Unlock()
+	}
+
 	fmt.Printf("[GOSSIP] Received from %s: node %s is OFFLINE\n", fromNode, failedNodeID)
 
 	if detector != nil {
@@ -80,25 +93,20 @@ func (g *GossipManager) ReceiveGossip(fromNode, failedNodeID string, detector *D
 		detector.mu.Unlock()
 	}
 
-	// Forward the gossip further (epidemic spreading)
 	go g.SpreadFailure(failedNodeID)
 }
 
-// GetRumourCount returns how many times we gossiped about a node (for testing)
 func (g *GossipManager) GetRumourCount(nodeID string) int {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.rumours[nodeID]
 }
 
-// GetPeerCount returns number of registered peers (for testing)
 func (g *GossipManager) GetPeerCount() int {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return len(g.peers)
 }
-
-// ---- Private helpers ----
 
 func (g *GossipManager) pickRandomPeers(n int, excludeID string) map[string]string {
 	var candidates []string

@@ -15,23 +15,18 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	// Build peer node objects from config
 	peerNodes := buildPeerNodes(cfg.Peers)
 
-	// Start fault manager (heartbeat + detection)
 	fm := fault.NewFaultManager(cfg.NodeID, cfg.Peers, peerNodes)
 	fm.Start()
 
-	// Give handler access to fault manager
 	api.FM = fm
 
-	// Start HTTP server
 	http.HandleFunc("/message", api.MessageHandler)
+	http.HandleFunc("/status", api.StatusHandler)
 
 	addr := cfg.Host + ":" + cfg.Port
 	fmt.Printf("[NODE %s] Starting on %s\n", cfg.NodeID, addr)
-
-	// log.Fatal keeps the program alive — it only exits if the server crashes
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
