@@ -39,6 +39,10 @@ func main() {
 	http.HandleFunc("/checkpoint", checkpointHandler)
 	http.HandleFunc("/health", healthHandler)
 
+	//test endpoints
+	http.HandleFunc("/simulate-failure", simulateFailureHandler)
+	http.HandleFunc("/simulate-rejoin", simulateRejoinHandler)
+
 	log.Printf("[%s] running on %s\n", nodeID, nodeURL)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
@@ -158,4 +162,40 @@ func parseTargets(targets string) []string {
 		}
 	}
 	return result
+}
+
+//test endpoints
+
+func simulateFailureHandler(w http.ResponseWriter, r *http.Request) {
+	nodeIDParam := r.URL.Query().Get("node")
+	if nodeIDParam == "" {
+		http.Error(w, "node parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	err := manager.ReplicateFilesFromFailedNode(nodeIDParam)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("re-replication triggered for " + nodeIDParam))
+}
+
+func simulateRejoinHandler(w http.ResponseWriter, r *http.Request) {
+	nodeIDParam := r.URL.Query().Get("node")
+	if nodeIDParam == "" {
+		http.Error(w, "node parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	err := manager.SyncNodeFromCheckpoint(nodeIDParam)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("checkpoint sync triggered for " + nodeIDParam))
 }
