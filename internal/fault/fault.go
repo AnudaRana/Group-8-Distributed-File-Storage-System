@@ -2,7 +2,6 @@ package fault
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"dfs-system/internal/types"
@@ -17,22 +16,13 @@ type FaultManager struct {
 
 func NewFaultManager(selfID string, peers []string, peerNodes []*types.Node) *FaultManager {
 	detector := NewDetector(6 * time.Second)
+	gossip := NewGossipManager(selfID, 2)
 
 	for _, node := range peerNodes {
 		detector.RegisterNode(node)
-	}
 
-	gossip := NewGossipManager(selfID, 2)
-
-	for i, addr := range peers {
-		parts := strings.Split(addr, ":")
-		if len(parts) == 2 {
-			peerID := fmt.Sprintf("node%d", i+2)
-			if i < len(peerNodes) {
-				peerID = peerNodes[i].ID
-			}
-			gossip.RegisterPeer(peerID, addr)
-		}
+		addr := fmt.Sprintf("%s:%d", node.Host, node.Port)
+		gossip.RegisterPeer(node.ID, addr)
 	}
 
 	hbSender := NewHeartbeatSender(selfID, peers, 2*time.Second)

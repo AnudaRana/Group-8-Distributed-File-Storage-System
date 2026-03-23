@@ -15,9 +15,17 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
+	// 1. Build nodes using the explicit ID=HOST:PORT mapping
 	peerNodes := buildPeerNodes(cfg.Peers)
 
-	fm := fault.NewFaultManager(cfg.NodeID, cfg.Peers, peerNodes)
+	// 2. We extract just the raw network addresses for the Heartbeat Sender
+	// so it doesn't try to dial "node2=127.0.0.1:9002"
+	var rawAddresses []string
+	for _, node := range peerNodes {
+		rawAddresses = append(rawAddresses, fmt.Sprintf("%s:%d", node.Host, node.Port))
+	}
+
+	fm := fault.NewFaultManager(cfg.NodeID, rawAddresses, peerNodes)
 	fm.Start()
 
 	api.FM = fm
@@ -32,20 +40,24 @@ func main() {
 
 func buildPeerNodes(peers []string) []*types.Node {
 	var nodes []*types.Node
-	for i, peer := range peers {
-		parts := strings.Split(peer, ":")
+	for _, peerStr := range peers {
+		// Expects format: "node2=127.0.0.1:9002"
+		parts := strings.Split(peerStr, "=")
 		if len(parts) != 2 {
 			continue
 		}
-		host := parts[0]
-		port := 8080
-		fmt.Sscanf(parts[1], "%d", &port)
+		id := parts[0]
+		addr := parts[1]
 
-		node := types.NewNode(
-			fmt.Sprintf("node%d", i+2),
-			host,
-			port,
-		)
+		addrParts := strings.Split(addr, ":")
+		if len(addrParts) != 2 {
+			continue
+		}
+
+		var port int
+		fmt.Sscanf(addrParts[1], "%d", &port)
+
+		node := types.NewNode(id, addrParts[0], port)
 		nodes = append(nodes, node)
 	}
 	return nodes

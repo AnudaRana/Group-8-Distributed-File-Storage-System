@@ -65,7 +65,6 @@ func (r *RecoveryManager) OnNodeRejoin(nodeID string) {
 
 	record, exists := r.records[nodeID]
 
-	// Fix — if already complete, don't sync again (prevents double sync)
 	if exists && record.State == RecoveryComplete {
 		r.mu.Unlock()
 		fmt.Printf("[RECOVERY] Node %s already recovered — ignoring duplicate rejoin\n", nodeID)
