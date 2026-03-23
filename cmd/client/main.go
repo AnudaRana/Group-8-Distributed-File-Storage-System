@@ -1,22 +1,40 @@
 package main
 
 import (
-	"dfs-system/internal/transport"
-	"dfs-system/internal/types"
-	"dfs-system/internal/utils"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
 )
 
 func main() {
-	msg, _ := types.NewMessage(
-		types.MsgHeartbeat,
-		"client",
-		map[string]interface{}{"status": "ping"},
-	)
-	utils.Log("CLIENT", "Sending heartbeat to 127.0.0.1:12345...")
-	err := transport.Send("http://127.0.0.1:12345/message", msg)
-	if err != nil {
-		utils.Log("CLIENT", "Error connecting to node: %v", err)
-		return
+	file := map[string]any{
+		"name":    "notes.txt",
+		"content": "Hello from distributed file storage client",
 	}
-	utils.Log("CLIENT", "Message successfully sent!")
+
+	jsonData, err := json.Marshal(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := http.Post("http://localhost:8001/write", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println("Write Response:", string(body))
+
+	readResp, err := http.Get("http://localhost:8001/read?name=notes.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer readResp.Body.Close()
+
+	readBody, _ := io.ReadAll(readResp.Body)
+	fmt.Println("Read Response:", string(readBody))
 }
