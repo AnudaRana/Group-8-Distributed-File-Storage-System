@@ -6,6 +6,7 @@ import (
 
 	"dfs-system/internal/config"
 	"dfs-system/internal/fault"
+	"dfs-system/internal/consensus"
 	"dfs-system/internal/types"
 	"dfs-system/internal/utils"
 )
@@ -14,6 +15,7 @@ var cfg = config.LoadConfig()
 
 // FaultManager is set from main.go after startup
 var FM *fault.FaultManager
+var Consensus *consensus.Raft
 
 func MessageHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
@@ -33,10 +35,27 @@ func MessageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		utils.Log(cfg.NodeID, "💓 Heartbeat recorded from %s", msg.Sender)
 
-	// Other members will add their cases here:
-	// case types.MsgReplicate:  → Member 2
-	// case types.MsgSyncClock:  → Member 3
-	// case types.MsgVoteReq:    → Member 4
+	/* --- MEMBER 4: RAFT MESSAGE ROUTING ---
+	 * Description: Handles internal consensus messages.
+	 * Why: Routes heartbeats, append replies, and vote messages to the correct logic.
+	*/
+	case types.MsgVoteReq:
+		if Consensus != nil {
+			Consensus.HandleVoteRequest(msg)
+		}
+	case types.MsgVoteReply:
+		if Consensus != nil {
+			Consensus.HandleVoteReply(msg)
+		}
+	case types.MsgLeaderHB:
+		if Consensus != nil {
+			Consensus.HandleLeaderHeartbeat(msg)
+		}
+	case "APPEND_REPLY":
+		if Consensus != nil {
+			Consensus.HandleAppendReply(msg)
+		}
+	
 
 	default:
 		utils.Log(cfg.NodeID, "Unknown message type: %s", msg.Type)
