@@ -87,11 +87,26 @@ func (r *Raft) Start() {
  * Date Written: 21/03/2026
  * Why: Allows clean shutdown of all background processes.
  * Inputs: None
- * Outputs / Expected Outcome: Closes shutdown channel.
+ * Outputs / Expected Outcome: Closes shutdown channel and stops timers.
  */
 
 func (r *Raft) Stop() {
-	close(r.shutdownCh)
+	// Bugfix (24/03/2026): Added mutex locks + stopped timers to avoid background routines running after shutdown.
+	r.mu.Lock()
+	if r.electionTimer != nil {
+		r.electionTimer.Stop()
+	}
+	if r.heartbeatTimer != nil {
+		r.heartbeatTimer.Stop()
+	}
+	r.mu.Unlock()
+
+	// Bugfix (24/03/2026): Prevents shutdown channel from being closed twice
+	select {
+	case <-r.shutdownCh:
+	default:
+		close(r.shutdownCh)
+	}
 }
 
 /*
@@ -289,7 +304,8 @@ func (r *Raft) HandleVoteReply(msg *types.Message) {
 			if r.electionTimer != nil {
 				r.electionTimer.Stop()
 			}
-			r.startHeartbeats()
+			// Bugfix (24/03/2026): Run as goroutine to avoid deadlock with startHeartbeats()
+			go r.startHeartbeats()
 		}
 	}
 }
@@ -305,6 +321,11 @@ func (r *Raft) HandleVoteReply(msg *types.Message) {
 
 func (r *Raft) startHeartbeats() {
 	r.sendHeartbeats()
+	
+	// Bugfix (24/03/2026): Lock moved here to protect only the timer,letting sendHeartbeats() handle locking safely.
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
 	if r.heartbeatTimer != nil {
 		r.heartbeatTimer.Stop()
 	}
