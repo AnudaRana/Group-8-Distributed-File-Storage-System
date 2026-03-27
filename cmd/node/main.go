@@ -8,6 +8,7 @@ import (
 
 	"dfs-system/internal/api"
 	"dfs-system/internal/config"
+	"dfs-system/internal/consensus"
 	"dfs-system/internal/fault"
 	"dfs-system/internal/types"
 )
@@ -24,6 +25,18 @@ func main() {
 
 	// Give handler access to fault manager
 	api.FM = fm
+
+	/* --- MEMBER 4: SYSTEM INTEGRATION ---
+	 * Description: Initializes the Raft backend for consensus handling.
+	 * Why: Runs the Raft state machine alongside the server.
+	*/
+	var peerUrls []string
+	for _, p := range cfg.Peers {
+		peerUrls = append(peerUrls, p)
+	}
+	raftNode := consensus.NewRaft(cfg.NodeID, cfg.Host, cfg.Port, peerUrls)
+	api.Consensus = raftNode
+	go raftNode.Start()
 
 	// Start HTTP server
 	http.HandleFunc("/message", api.MessageHandler)
