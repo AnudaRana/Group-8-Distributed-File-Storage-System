@@ -50,7 +50,6 @@ func (d *Detector) RecordHeartbeat(nodeID string) {
 	rejoinCallback := d.OnRejoin
 	d.mu.Unlock()
 
-	// Fire rejoin callback outside the lock
 	if wasOffline && rejoinCallback != nil {
 		rejoinCallback(nodeID)
 	}

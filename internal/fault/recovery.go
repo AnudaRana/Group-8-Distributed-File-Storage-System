@@ -44,8 +44,6 @@ func (r *RecoveryManager) OnNodeFailure(nodeID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Always create fresh record on failure
-	// This resets state so next rejoin fires correctly
 	r.records[nodeID] = &RecoveryRecord{
 		NodeID:   nodeID,
 		FailedAt: time.Now(),
