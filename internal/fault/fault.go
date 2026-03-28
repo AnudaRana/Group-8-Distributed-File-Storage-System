@@ -54,5 +54,5 @@ func NewFaultManager(selfID string, peers []string, peerNodes []*types.Node) *Fa
 func (fm *FaultManager) Start() {
 	fm.Detector.StartMonitoring()
 	fm.Heartbeat.Start()
-	fmt.Println("[FAULT MANAGER] Started — heartbeat sender + detector running")
+	fmt.Println("[MANAGER]   Started - heartbeat sender and detector running")
 }

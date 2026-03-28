@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"dfs-system/internal/clock"
 	"dfs-system/internal/config"
 	"dfs-system/internal/fault"
 	"dfs-system/internal/consensus"
@@ -14,8 +15,12 @@ import (
 )
 
 var cfg = config.LoadConfig()
+
 var FM *fault.FaultManager
 var Consensus *consensus.Raft
+
+
+var ClockSyncer *clock.Syncer
 
 func MessageHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
@@ -35,6 +40,16 @@ func MessageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		utils.Log(cfg.NodeID, "💓 Heartbeat recorded from %s", msg.Sender)
 
+	case types.MsgSyncClock:
+		if ClockSyncer != nil {
+			utils.Log(cfg.NodeID, "🕐 Clock sync request from %s — offset: %dns",
+				msg.Sender, ClockSyncer.Offset())
+		}
+
+	// case types.MsgReplicate: → Member 2
+	// case types.MsgVoteReq:   → Member 4
+	// case types.MsgVoteReply: → Member 4
+	// case types.MsgLeaderHB:  → Member 4
 	/* --- MEMBER 4: RAFT MESSAGE ROUTING ---
 	 * Description: Handles internal consensus messages.
 	 * Why: Routes heartbeats, append replies, and vote messages to the correct logic.

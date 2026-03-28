@@ -7,7 +7,13 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"dfs-system/internal/api"
+	"dfs-system/internal/clock"
+	"dfs-system/internal/config"
+	"dfs-system/internal/fault"
+	"dfs-system/internal/types"
 	"dfs-system/internal/replication"
 )
 
@@ -64,6 +70,34 @@ func writeHandler(w http.ResponseWriter, r *http.Request) {
 
 	api.FM = fm
 
+	// Initialize clock syncer if peers are configured
+	if len(cfg.Peers) > 0 && cfg.Peers[0] != "" {
+		peerURL := fmt.Sprintf("http://%s", cfg.Peers[0])
+		api.ClockSyncer = clock.NewSyncer(peerURL)
+
+		// Perform initial sync
+		if _, err := api.ClockSyncer.Synchronise(); err != nil {
+			log.Printf("[NODE %s] Initial clock sync failed: %v", cfg.NodeID, err)
+		} else {
+			log.Printf("[NODE %s] Clock synchronized with %s", cfg.NodeID, peerURL)
+		}
+
+		// Start background sync loop
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		api.ClockSyncer.RunLoop(30*time.Second, stopCh)
+	}
+
+	// Start HTTP server
+	http.HandleFunc("/message", api.MessageHandler)
+	http.HandleFunc("/time", clock.TimeHandler)
+
+	addr := cfg.Host + ":" + cfg.Port
+	fmt.Printf("[NODE %s] Starting on %s\n", cfg.NodeID, addr)
+	
+	log.Printf("⚙️  [ARCH_CONFIG] Time Synchronization Initialized | Trade-off selected: Periodic polling (30s interval) to minimize network overhead while proactively tracking offset drift.")
+
+	// log.Fatal keeps the program alive — it only exits if the server crashes
 	http.HandleFunc("/message", api.MessageHandler)
 	http.HandleFunc("/status", api.StatusHandler)
 

@@ -1,6 +1,9 @@
 package main
 
 import (
+  "dfs-system/internal/transport"
+	"dfs-system/internal/types"
+	"dfs-system/internal/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -113,12 +116,15 @@ func requestFile(filename, addr string) {
 			"filename": filename,
 		},
 	)
+	utils.Log("CLIENT", "Sending heartbeat to 127.0.0.1:9001...")
+	err := transport.Send("http://127.0.0.1:9001/message", msg)
 
 	err := transport.Send("http://"+addr+"/message", msg)
 	if err != nil {
 		fmt.Printf("  ❌ Failed to reach %s: %v\n", addr, err)
 		return
 	}
+	utils.Log("CLIENT", "Message successfully sent!")
 	fmt.Printf("  ✅ File '%s' served from %s\n", filename, addr)
 }
 
