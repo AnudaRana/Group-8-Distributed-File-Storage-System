@@ -10,7 +10,7 @@ import (
 
 type HeartbeatSender struct {
 	selfID   string
-	peers    []string // peer addresses e.g. ["127.0.0.1:8081", "127.0.0.1:8082"]
+	peers    []string
 	interval time.Duration
 }
 
@@ -22,7 +22,6 @@ func NewHeartbeatSender(selfID string, peers []string, interval time.Duration) *
 	}
 }
 
-// Runs forever in background — call once at startup
 func (h *HeartbeatSender) Start() {
 	go func() {
 		for {

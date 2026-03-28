@@ -63,7 +63,6 @@ func TestNodeMarkedFailedAfterTimeout(t *testing.T) {
 	}
 }
 
-// Test 4: OnFailure callback is triggered
 func TestOnFailureCallbackFired(t *testing.T) {
 	detector := NewDetector(500 * time.Millisecond)
 
@@ -85,7 +84,6 @@ func TestOnFailureCallbackFired(t *testing.T) {
 	}
 }
 
-// Test 5: Node comes back online after sending heartbeat again
 func TestNodeRecoveryAfterHeartbeat(t *testing.T) {
 	detector := NewDetector(500 * time.Millisecond)
 
@@ -110,7 +108,6 @@ func TestNodeRecoveryAfterHeartbeat(t *testing.T) {
 	}
 }
 
-// Test 6: Multiple nodes — only the silent one fails
 func TestOnlyOfflineNodeFails(t *testing.T) {
 	detector := NewDetector(500 * time.Millisecond)
 
@@ -120,7 +117,6 @@ func TestOnlyOfflineNodeFails(t *testing.T) {
 	detector.RegisterNode(node3)
 	detector.StartMonitoring()
 
-	// node3 keeps sending heartbeats, node2 goes silent
 	go func() {
 		for i := 0; i < 5; i++ {
 			time.Sleep(300 * time.Millisecond)
