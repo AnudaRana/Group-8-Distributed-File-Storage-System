@@ -3,6 +3,7 @@
 ## Project Overview
 We have developed a distributed file storage system designed for high availability, fault tolerance, and strong consistency. The system supports concurrent read and write operations from multiple clients and ensures that uploaded files are replicated across the cluster to prevent data loss.
 
+The final version of the system is in 'deployment' branch not 'main'
 ### 🚀 Core Engineering Team (Group 8)
 
 | Responsibility | Full Name | Student ID | Academic Email |
