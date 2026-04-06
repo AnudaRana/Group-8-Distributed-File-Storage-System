@@ -43,7 +43,3 @@ scripts\start_all.bat
 - **Active Nodes**: You should see node1, node2, and node3 status as "Alive".
 - **Standby Pool**: Node4 and Node5 are in standby and will appear if you simulate a node failure.
 
----
-*Group 8 - Distributed File Storage System (2026)*
-
-
